@@ -2,12 +2,12 @@ import sys
 
 sys.path.append("/Users/Murtazo/Desktop/mxurramov/personal/demo-blockchain")
 
-import json
 import time
 from xml.etree.ElementTree import VERSION
 
 from src.backend.core.block import Block
 from src.backend.core.block_header import BlockHeader
+from src.backend.core.database.database import BlockchainDB
 from src.backend.util.util import hash_string
 
 ZERO_HASH = "0" * 64
@@ -16,8 +16,15 @@ VERSION = 1  # noqa
 
 class Blockchain:
     def __init__(self):
-        self.chain = []
         self.genesis_block()
+
+    def write_on_disk(self, block):
+        db = BlockchainDB()
+        db.create(block)
+
+    def fetch_last_block(self):
+        db = BlockchainDB()
+        return db.last_block()
 
     def genesis_block(self):
         block_hight = 0
@@ -37,22 +44,23 @@ class Blockchain:
             bits=bits,
         )
         block_header.mine()
-        self.chain.append(
-            Block(
-                block_header=block_header.__dict__,
-                height=block_height,
-                block_size=1,
-                tx_count=1,
-                txs=transaction,
-            ).__dict__
+        self.write_on_disk(
+            [
+                Block(
+                    block_header=block_header.__dict__,
+                    height=block_height,
+                    block_size=1,
+                    tx_count=1,
+                    txs=transaction,
+                ).__dict__
+            ]
         )
-        print(json.dumps(self.chain, indent=4))
 
     def main(self):
         while True:
-            last_block = self.chain[::-1]
-            block_height = last_block[0]["height"] + 1
-            prev_block_hash = last_block[0]["block_header"]["block_hash"]
+            last_block = self.fetch_last_block()
+            block_height = last_block["height"] + 1
+            prev_block_hash = last_block["block_header"]["block_hash"]
             self.add_block(block_height, prev_block_hash)
 
 
